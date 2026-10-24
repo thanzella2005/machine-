@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="config.js"></script>
+<meta name="theme-color" content="#121A1F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Machine Down">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>Machine Down</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one working column like a control-room panel. An andon light stack shows the round, a to-scale timeline is the centrepiece.
+   Palette: concrete grey, ink, safety yellow for action, alarm red for lateness and the breakdown, signal green for on time. */
+:root{
+  --bg:#E3E8EB; --panel:#F3F6F7; --panel-2:#D9E0E4; --ink:#121A1F; --ink-2:#47565E; --line:#B2BEC5;
+  --yellow:#FFC400; --yellow-ink:#121A1F; --red:#C62E22; --red-2:#A8261C; --green:#1F8A4C; --block:#6F838F; --done:#3A4A53; --on:#FFFFFF;
+  --font-display:'Saira Condensed','Arial Narrow',sans-serif;
+  --font-body:'Barlow',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1417; --panel:#151E23; --panel-2:#1F2B32; --ink:#E7EEF1; --ink-2:#9AAAB3; --line:#304049;
+    --yellow:#FFC400; --yellow-ink:#121A1F; --red:#E8483B; --red-2:#C93A2E; --green:#2FA865; --block:#5C717D; --done:#7C909B; --on:#0E1417; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1417; --panel:#151E23; --panel-2:#1F2B32; --ink:#E7EEF1; --ink-2:#9AAAB3; --line:#304049;
+  --yellow:#FFC400; --yellow-ink:#121A1F; --red:#E8483B; --red-2:#C93A2E; --green:#2FA865; --block:#5C717D; --done:#7C909B; --on:#0E1417; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--font-body);
+  padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:2px;box-shadow:0 0 0 5px var(--ink)}
+.head{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
+.eyebrow{font:600 12px var(--font-body);text-transform:uppercase;letter-spacing:.14em;color:var(--ink-2)}
+h1{font:800 56px/.95 var(--font-display);text-transform:uppercase;letter-spacing:.02em;margin:2px 0 0}
+h2{font:700 26px/1.1 var(--font-display);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+h3{font:700 18px/1.2 var(--font-display);text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px}
+.andon{display:flex;gap:6px;list-style:none;margin:0;padding:0}
+.lamp{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:78px;padding:7px 8px;background:var(--panel);border:1.5px solid var(--ink);border-radius:2px;font:600 11px var(--font-body);text-transform:uppercase;letter-spacing:.08em;text-align:center}
+.lamp i{display:block;width:100%;height:10px;background:var(--panel-2);border:1px solid var(--line)}
+.lamp.on i{background:var(--yellow);border-color:var(--ink)}
+.lamp.alarm i{background:var(--red);border-color:var(--ink)}
+.lamp.done i{background:var(--green);border-color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.lamp.alarm i{animation:blink 1s steps(2,jump-none) infinite}@keyframes blink{50%{opacity:.35}}}
+.panel{background:var(--panel);border:1.5px solid var(--ink);border-radius:3px;padding:16px;min-width:0;margin-bottom:14px}
+.label{font:600 12px var(--font-body);text-transform:uppercase;letter-spacing:.12em;color:var(--ink-2)}
+p{margin:0 0 10px}
+.muted{color:var(--ink-2);font-size:15px}
+.story{max-width:64ch}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+th{font:600 11px var(--font-body);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+td.m,th.m{text-align:right}
+td.m{font-family:var(--font-mono)}
+td b.j{display:inline-grid;place-items:center;width:26px;height:26px;background:var(--ink);color:var(--bg);font:700 16px var(--font-display);margin-right:8px;border-radius:2px}
+.rules{margin:10px 0 14px;padding:0;list-style:none;display:grid;gap:4px;font-size:15px}
+.rules li{padding-left:16px;position:relative}
+.rules li::before{content:"";position:absolute;left:0;top:.6em;width:8px;height:8px;background:var(--yellow);border:1px solid var(--ink)}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:10px 0 14px}
+.fld{display:grid;gap:4px;min-width:0}
+.fld span{font:600 12px var(--font-body);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+input[type=text],input[type=number],textarea{width:100%;min-width:0;background:var(--bg);border:2px solid var(--ink);border-radius:2px;padding:9px 11px}
+textarea{resize:vertical;min-height:92px;line-height:1.4}
+.btn{background:var(--panel);border:2px solid var(--ink);border-radius:2px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn:hover:not(:disabled){background:var(--panel-2)}
+.btn.go{background:var(--yellow);color:var(--yellow-ink);font:700 20px var(--font-display);text-transform:uppercase;letter-spacing:.08em;padding:10px 22px;box-shadow:0 3px 0 var(--ink)}
+.btn.go:hover:not(:disabled){background:var(--yellow);filter:brightness(1.06)}
+.btn.go:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:4px 9px;font-size:14px}
+.link{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;color:var(--ink-2);font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.alarm-banner{background:var(--red);color:#fff;border:2px solid var(--ink);padding:14px 16px;margin-bottom:14px;border-radius:3px}
+.alarm-banner h2{color:#fff;margin:0 0 4px;font-size:30px}
+.alarm-banner p{margin:0}
+.pool{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px;margin:8px 0 12px}
+.card{display:grid;gap:1px;text-align:left;background:var(--panel);border:2px solid var(--ink);border-radius:2px;padding:8px 10px;cursor:pointer;min-width:0}
+.card:hover:not(:disabled){background:var(--panel-2)}
+.card:disabled{opacity:.35;cursor:not-allowed}
+.card .cl{font:800 30px/1 var(--font-display)}
+.card .cn{font-weight:600}
+.card .cm{font:500 13px var(--font-mono);color:var(--ink-2)}
+.queue{list-style:none;margin:8px 0 12px;padding:0;display:grid;gap:6px}
+.queue li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--bg);border:1.5px solid var(--line);padding:6px 8px;border-radius:2px}
+.queue .pos{font:600 13px var(--font-mono);color:var(--ink-2);min-width:2ch}
+.queue .nm b{font:800 20px var(--font-display);margin-right:8px}
+.queue .ops{display:flex;gap:4px}
+.empty{color:var(--ink-2);font-size:15px;padding:8px 0}
+/* timeline */
+.gwrap{background:var(--bg);border:1.5px solid var(--ink);border-radius:2px;padding:12px 14px 8px;margin:8px 0 12px}
+.lane{position:relative;height:58px;border-right:1px solid var(--line);background-image:repeating-linear-gradient(to right,var(--line) 0 1px,transparent 1px calc(100% / 14))}
+.blk{position:absolute;top:0;bottom:0;display:grid;place-items:center;background:var(--block);color:var(--on);box-shadow:inset -2px 0 0 var(--bg);overflow:hidden}
+.blk b{font:800 24px var(--font-display)}
+.blk.done{background:var(--done)}
+.blk.ok{background:var(--green)}
+.blk.late{background:repeating-linear-gradient(-45deg,var(--red) 0 7px,var(--red-2) 7px 14px)}
+.blk.fix{background:repeating-linear-gradient(-45deg,var(--yellow) 0 8px,#121A1F 8px 16px);color:var(--yellow-ink)}
+.blk.fix span{background:var(--yellow);color:var(--yellow-ink);font:700 10px var(--font-mono);padding:1px 4px;letter-spacing:.04em}
+.axis,.dues{position:relative;height:22px}
+.axis span{position:absolute;top:4px;transform:translateX(-50%);font:500 11px var(--font-mono);color:var(--ink-2)}
+.dues{height:26px}
+.due{position:absolute;top:6px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font:700 11px var(--font-mono);padding:0 5px;border-radius:2px}
+.due::before{content:"";position:absolute;left:50%;top:-5px;transform:translateX(-50%);border:3px solid transparent;border-bottom-color:var(--ink);border-top:0}
+.gleg{font-size:13px;color:var(--ink-2);margin-top:4px}
+.sw{display:inline-block;width:10px;height:10px;margin:0 4px 0 8px;vertical-align:-1px;border:1px solid var(--ink)}
+.sw.ok{background:var(--green)} .sw.late{background:var(--red)} .sw.due{background:var(--ink)}
+.fin{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 14px;margin:8px 0 12px}
+.fin label{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.fin label b{font:800 22px var(--font-display)}
+.stat-ok{color:var(--green);font-weight:600} .stat-late{color:var(--red);font-weight:600}
+.pts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
+.pt{border:1.5px solid var(--ink);background:var(--bg);padding:8px 10px;display:grid;gap:2px}
+.pt b{font:600 24px var(--font-mono);font-variant-numeric:tabular-nums}
+.pt small{color:var(--ink-2);font-size:13px}
+.big{font:800 72px/1 var(--font-display);letter-spacing:.01em}
+.big small{font-size:30px;color:var(--ink-2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{font:700 18px var(--font-display);background:var(--ink);color:var(--bg);padding:2px 10px;border-radius:2px}
+.chip.fixc{background:var(--yellow);color:var(--yellow-ink);font-size:14px;font-family:var(--font-mono)}
+.sub{width:100%;min-height:210px;font:500 13px/1.45 var(--font-mono)}
+.foot{margin-top:24px;display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;color:var(--ink-2);font-size:13px}
+.org textarea{min-height:160px;font:500 13px/1.4 var(--font-mono)}
+.verify-ok{color:var(--green);font-weight:600} .verify-bad{color:var(--red);font-weight:600}
+details summary{cursor:pointer;color:var(--ink-2);font-size:14px}
+details p{font-size:14px;margin:6px 0 0;max-width:70ch;white-space:normal}
+td input.jm{width:70px;padding:4px 6px;text-align:right;font-family:var(--font-mono)}
+.err{color:var(--red);font-weight:600;font-size:14px}
+@media (max-width:480px){h1{font-size:44px}.lamp{min-width:0;flex:1}.andon{width:100%}}
+body{margin:0}
+:root{color-scheme:light dark}
+.ps dl{display:grid;grid-template-columns:minmax(80px,110px) minmax(0,1fr);gap:8px 14px;margin:10px 0 0}.ps dt{font:700 14px var(--font-display);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);padding-top:3px}.ps dd{margin:0;max-width:66ch}.ps h2{margin-top:2px}@media (max-width:480px){.ps dl{grid-template-columns:1fr;gap:2px}.ps dd{margin-bottom:8px}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="head">
+    <div>
+      <div class="eyebrow">ABC Manufacturing · Production Manager Challenge</div>
+      <h1>Machine Down</h1>
+    </div>
+    <ol class="andon" id="andon" aria-label="Round progress"></ol>
+  </header>
+  <main id="screen"></main>
+  <div class="foot"><span>Built for the college fest pre-event. One attempt per participant.</span></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+
+/* ---------- case data ---------- */
+var J={A:{n:'Gear',p:3,d:6,pr:500},B:{n:'Shaft',p:2,d:4,pr:400},C:{n:'Bolt',p:1,d:8,pr:200},D:{n:'Bearing',p:4,d:7,pr:700},E:{n:'Pulley',p:2,d:5,pr:350}};
+var L=['A','B','C','D','E'],REPAIR=2,HORIZON=14,MAX_ATTEMPTS=2,CFG=window.MD_CONFIG||{},SUBMIT_URL=String(CFG.submitUrl||'').trim(),KEY='machine-down-v1';
+
+function run(order,repair){
+  var t=0,rows=[],tard=0,on=0,profit=0,ontime=[];
+  order.forEach(function(j,i){
+    var s=t;t+=J[j].p;
+    var late=Math.max(0,t-J[j].d);
+    rows.push({j:j,s:s,f:t,late:late});
+    if(late===0){on++;profit+=J[j].pr;ontime.push(j)}
+    tard+=late;
+    if(i===0&&repair)t+=REPAIR;
+  });
+  return {rows:rows,on:on,tard:tard,profit:profit,ontime:ontime};
+}
+/* ---------- state ---------- */
+var STAGES=['intro','r1','r1res','r2','r2res','r3','final'];
+function fresh(){return {stage:'intro',attempt:1,sent:'',name:'',roll:'',t0:0,t1:0,q1:[],f1:{},q2:[],f2:{},why:'',handle:'',impact:'',s1:null,s2:null}}
+function load(){
+  try{
+    var s=JSON.parse(localStorage.getItem(KEY));
+    if(s&&STAGES.indexOf(s.stage)>=0&&Array.isArray(s.q1)&&Array.isArray(s.q2)){
+      var f=fresh();for(var k in f)if(s[k]!==undefined)f[k]=s[k];
+      f.q1=f.q1.filter(function(j){return J[j]});f.q2=f.q2.filter(function(j){return J[j]});
+      return f;
+    }
+  }catch(e){}
+  return fresh();
+}
+var S=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function fmt(sec){var m=Math.floor(sec/60),s=sec%60;return (m<10?'0':'')+m+':'+(s<10?'0':'')+s}
+function num(x){var v=parseFloat(x);return isNaN(v)?null:v}
+function norm(s){return String(s||'').replace(/\s+/g,' ').trim()}
+function oneLine(s){return norm(s)}
+function hash(str){var h=0x811c9dc5;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return ('0000000'+h.toString(36).toUpperCase()).slice(-7)}
+
+/* ---------- pieces ---------- */
+function andon(){
+  var st=STAGES.indexOf(S.stage),h='';
+  var defs=[['Plan',['r1','r1res']],['Breakdown',['r2','r2res']],['Decision',['r3']]];
+  defs.forEach(function(d,i){
+    var cl='lamp';
+    if(S.stage==='final')cl+=' done';
+    else if(d[1].indexOf(S.stage)>=0)cl+=i===1?' alarm':' on';
+    else if(st>STAGES.indexOf(d[1][d[1].length-1]))cl+=' done';
+    h+='<li class="'+cl+'"><i></i>Round '+(i+1)+' · '+d[0]+'</li>';
+  });
+  $('#andon').innerHTML=h;
+}
+function jobTable(){
+  return '<div class="tw"><table><thead><tr><th>Job</th><th class="m">Processing</th><th class="m">Due</th><th class="m">Profit</th></tr></thead><tbody>'+
+    L.map(function(j){return '<tr><td><b class="j">'+j+'</b>'+J[j].n+'</td><td class="m">'+J[j].p+' hr</td><td class="m">'+J[j].d+' hr</td><td class="m">₹'+J[j].pr+'</td></tr>'}).join('')+'</tbody></table></div>';
+}
+function gantt(rows,o){
+  var H=HORIZON,h='<div class="gwrap"><div class="lane">';
+  rows.forEach(function(r,i){
+    var cl='blk';
+    if(o.reveal)cl+=r.late?' late':' ok';else if(o.done0&&i===0)cl+=' done';
+    h+='<div class="'+cl+'" style="left:'+(r.s/H*100)+'%;width:'+((r.f-r.s)/H*100)+'%"><b>'+r.j+'</b></div>';
+  });
+  if(o.repair&&rows.length){h+='<div class="blk fix" style="left:'+(rows[0].f/H*100)+'%;width:'+(REPAIR/H*100)+'%"><span>REPAIR</span></div>'}
+  h+='</div>';
+  if(o.reveal){
+    h+='<div class="axis" aria-hidden="true">';for(var i=0;i<=H;i++)h+='<span style="left:'+(i/H*100)+'%">'+i+'</span>';h+='</div>';
+    h+='<div class="dues" aria-hidden="true">';rows.forEach(function(r){h+='<span class="due" style="left:'+(J[r.j].d/H*100)+'%">'+r.j+'</span>'});h+='</div>';
+    h+='<div class="gleg">Hours on the axis. <span class="sw ok"></span>On time <span class="sw late"></span>Late <span class="sw due"></span>Tag under the axis marks that job’s due hour</div>';
+  } else h+='<div class="gleg">Preview to scale. Each grid line is one hour. Work out the finish times yourself below.</div>';
+  return h+'</div>';
+}
+function jobCard(j,dis){return '<button class="card" data-act="add" data-j="'+j+'"'+(dis?' disabled':'')+' aria-label="Add job '+j+', '+J[j].n+'"><span class="cl">'+j+'</span><span class="cn">'+J[j].n+'</span><span class="cm">'+J[j].p+' h · due '+J[j].d+' · ₹'+J[j].pr+'</span></button>'}
+function queueHTML(q,startPos){
+  if(!q.length)return '<div class="empty">Nothing queued yet. Tap a job card to add it.</div>';
+  return '<ol class="queue">'+q.map(function(j,i){
+    return '<li><span class="pos">'+(i+startPos)+'</span><span class="nm"><b>'+j+'</b>'+J[j].n+' <span class="muted">('+J[j].p+' h)</span></span><span class="ops">'+
+      '<button class="btn sm" data-act="up" data-i="'+i+'" aria-label="Move '+j+' earlier"'+(i===0?' disabled':'')+'>▲</button>'+
+      '<button class="btn sm" data-act="down" data-i="'+i+'" aria-label="Move '+j+' later"'+(i===q.length-1?' disabled':'')+'>▼</button>'+
+      '<button class="btn sm" data-act="rm" data-i="'+i+'" aria-label="Remove '+j+'">✕</button></span></li>';
+  }).join('')+'</ol>';
+}
+function finInputs(q,store,fromHint){
+  if(!q.length)return '';
+  return '<h3>Your calculation</h3><p class="muted">'+fromHint+'</p><div class="fin">'+q.map(function(j){
+    return '<label><b>'+j+'</b><span class="fld" style="gap:0"><input type="number" inputmode="decimal" min="0" max="40" step="1" id="f-'+j+'" value="'+esc(store[j]===undefined?'':store[j])+'" aria-label="Finish hour of job '+j+'" placeholder="Finishes at hour"></span></label>';
+  }).join('')+'</div>';
+}
+
+/* ---------- screens ---------- */
+function introHTML(){
+  return '<div class="panel ps"><div class="label">Problem statement \u00B7 Industrial Engineering \u00B7 Production planning and scheduling</div><h2>Single-machine scheduling under a breakdown</h2><dl><dt>Context</dt><dd>ABC Manufacturing has five urgent customer orders and one machine. Each order has a processing time, a due date and a profit. After the first job is completed, the machine fails and is unavailable for 2 hours.</dd><dt>Given</dt><dd>Jobs A to E, all available at hour 0. Processing times are fixed and a job cannot be interrupted once started. Data is in the table below.</dd><dt>Decision</dt><dd>The sequence in which jobs are processed: the full sequence before the failure (Round 1), then the order of the remaining jobs after it (Round 2).</dd><dt>Objective</dt><dd>Deliver as many orders as possible on time and keep total tardiness low. The tardiness of a job is max(0, completion time minus due date).</dd><dt>Challenge</dt><dd>The best plan before a disruption may not be the best after it. Rebuild your schedule and justify the change.</dd></dl></div>'+'<div class="panel"><h2>The situation</h2><div class="story"><p>You are the Production Manager of ABC Manufacturing. Five urgent orders landed at once, all to be made on <b>one machine</b>. Every customer has a different deadline. Deliver on time and the company earns profit and goodwill. Deliver late and it pays.</p><p>Then, after your first product is finished, <b>the machine breaks down</b>. Decide what to run first, how to reshuffle the rest, and how to ship the most orders with the least delay.</p></div>'+jobTable()+
+    '<ul class="rules"><li>All jobs arrive at hour 0. One machine, one job at a time.</li><li>A job cannot be interrupted once started. Processing times are fixed.</li><li>Three rounds: plan, survive the breakdown, then present your decision.</li><li>Scores are not shown in the app. The organizers mark every entry and announce the results. Ties go to the faster finisher.</li></ul>'+
+    '<div class="fields"><label class="fld"><span>Your name</span><input type="text" id="nm" maxlength="40" autocomplete="name" value="'+esc(S.name)+'"></label><label class="fld"><span>Roll number</span><input type="text" id="rl" maxlength="30" autocomplete="off" value="'+esc(S.roll)+'"></label></div>'+
+    '<button class="btn go" id="primary" data-act="start" disabled>Start the clock</button></div>';
+}
+function planHTML(round){
+  var h='',q=round===1?S.q1:S.q2,first=S.q1[0];
+  if(round===2){
+    var f0=J[first].p;
+    h+='<div class="alarm-banner" role="alert"><h2>Attention managers! Machine down</h2><p>Job '+first+' ('+J[first].n+') finished at hour '+f0+', then the machine broke down. Repair takes <b>'+REPAIR+' hours</b>, so it runs again at hour '+(f0+REPAIR)+'. Rearrange the remaining four jobs and minimise delay. Due dates do not move.</p></div>';
+  }
+  var order=round===1?S.q1:[first].concat(S.q2),pre=run(order,round===2);
+  var pool=L.filter(function(j){return round===1?S.q1.indexOf(j)<0:(j!==first&&S.q2.indexOf(j)<0)});
+  var need=round===1?5:4;
+  h+='<div class="panel"><h2>'+(round===1?'Round 1 · Production planning':'Round 2 · Replan the remaining jobs')+'</h2>';
+  h+='<p class="muted">'+(round===1?'Tap jobs in the order you want to make them, then work out each finish time.':'Job '+first+' is already done. Order the other four, then recalculate every finish time including the repair.')+'</p>';
+  h+=jobTable();
+  h+='<h3 style="margin-top:14px">Jobs available</h3><div class="pool">'+(pool.length?pool.map(function(j){return jobCard(j,false)}).join(''):'<div class="empty">All jobs are in the queue.</div>')+'</div>';
+  h+='<h3>'+(round===1?'Production queue':'New queue after repair')+'</h3>'+queueHTML(q,round===1?1:2);
+  h+=gantt(pre.rows,{reveal:false,repair:round===2,done0:round===2});
+  if(q.length){h+='<div class="row" style="margin-bottom:10px"><button class="btn sm" data-act="clear">Clear queue</button></div>'}
+  if(q.length===need){
+    h+=finInputs(q,round===1?S.f1:S.f2,round===1?'Add up the processing times in your order. At what hour does each job finish?':'Start from the hour the machine is back after repair. At what hour does each remaining job finish?');
+  }
+  if(round===2){h+='<label class="fld"><span>Why did you change your schedule?</span><textarea id="why" maxlength="300" placeholder="Explain your reasoning in a couple of sentences">'+esc(S.why)+'</textarea></label>'}
+  h+='<div class="row" style="margin-top:14px"><button class="btn go" id="primary" data-act="lock" disabled>Lock '+(round===1?'Round 1 plan':'Round 2 plan')+'</button><span class="err" id="hint"></span></div></div>';
+  return h;
+}
+function resultHTML(round){
+  var res=(round===1?S.s1:S.s2).res,h='';
+  h+='<div class="panel"><h2>Round '+round+' result</h2>'+gantt(res.rows,{reveal:true,repair:round===2});
+  h+='<div class="tw"><table><thead><tr><th>Job</th><th class="m">Finishes</th><th class="m">Due</th><th>Status</th></tr></thead><tbody>';
+  res.rows.forEach(function(r){
+    h+='<tr><td><b class="j">'+r.j+'</b>'+J[r.j].n+'</td><td class="m">'+r.f+'</td><td class="m">'+J[r.j].d+'</td><td>'+(r.late?'<span class="stat-late">Late '+r.late+' h</span>':'<span class="stat-ok">On time</span>')+'</td></tr>';
+  });
+  h+='</tbody></table></div><p class="muted" style="margin:12px 0">Round '+round+' is locked in. Scores are announced by the organizers.</p>';
+  h+='<button class="btn go" id="primary" data-act="next">'+(round===1?'Continue':'Go to Round 3')+'</button></div>';
+  return h;
+}
+function r3HTML(){
+  var s2=S.s2,order=[S.q1[0]].concat(S.q2);
+  var chips='<div class="chips"><span class="chip">'+order[0]+'</span><span class="chip fixc">REPAIR 2h</span>'+order.slice(1).map(function(j){return '<span class="chip">'+j+'</span>'}).join('')+'</div>';
+  return '<div class="panel"><h2>Round 3 · Manager’s final decision</h2><p class="muted">Your final sequence and results are filled in. Judges mark the two written answers.</p>'+
+    '<h3>Final job sequence</h3>'+chips+
+    '<p><b>Delivered on time:</b> '+(s2.res.ontime.join(', ')||'none')+' &nbsp;·&nbsp; <b>Total delay:</b> '+s2.res.tard+' h &nbsp;·&nbsp; <b>Profit secured:</b> ₹'+s2.res.profit+'</p>'+
+    '<label class="fld" style="margin-bottom:12px"><span>How did you handle the machine breakdown?</span><textarea id="handle" maxlength="300">'+esc(S.handle)+'</textarea></label>'+
+    '<label class="fld" style="margin-bottom:14px"><span>How does your decision help the company?</span><textarea id="impact" maxlength="300">'+esc(S.impact)+'</textarea></label>'+
+    '<div class="row"><button class="btn go" id="primary" data-act="submit" disabled>Submit final decision</button><span class="err" id="hint"></span></div></div>';
+}
+function b64(str){var bytes=new TextEncoder().encode(str),bin='';for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function submission(){
+  var secs=Math.max(0,Math.round((S.t1-S.t0)/1000)),name=norm(S.name),roll=norm(S.roll);
+  var p={n:name,r:roll,k:S.attempt||1,s:secs,a:S.q1.join(''),fa:S.q1.map(function(j){return num(S.f1[j])}),b:S.q2.join(''),fb:S.q2.map(function(j){return num(S.f2[j])}),w:oneLine(S.why),h:oneLine(S.handle),i:oneLine(S.impact)};
+  var enc=b64(JSON.stringify(p));
+  var code='MD2.'+hash(name+'|'+roll+'|'+enc)+'.'+enc;
+  var post=JSON.parse(JSON.stringify(p));post.id=hash(name+'|'+roll+'|'+post.k+'|'+secs+'|'+enc);
+  var nm=function(j){return j+' ('+J[j].n+')'},hrs=function(q,st){return q.map(function(j){return j+' = hour '+num(st[j])}).join(', ')},lst=function(a){return a.length?a.join(', '):'none'};
+  var q1=S.q1,q2=S.q2,r1=S.s1.res,r2=S.s2.res;
+  var lines=['MACHINE DOWN SUBMISSION','Name: '+name,'Roll No: '+roll,'Attempt: '+(S.attempt||1),'Time taken: '+fmt(secs),
+    'Round 1 order: '+q1.map(nm).join(', '),
+    'Round 1 finish hours I calculated: '+hrs(q1,S.f1),
+    'Round 1 delivered on time: '+lst(r1.ontime)+' | total delay: '+r1.tard+' h',
+    'Round 2 order: '+nm(q1[0])+', then 2 h repair, then '+q2.map(nm).join(', '),
+    'Round 2 finish hours I calculated: '+hrs(q2,S.f2),
+    'Round 2 delivered on time: '+lst(r2.ontime)+' | total delay: '+r2.tard+' h',
+    'Why I changed the schedule: '+oneLine(S.why),'How I handled the breakdown: '+oneLine(S.handle),'How this helps the company: '+oneLine(S.impact)];
+  return {txt:lines.join('\n'),secs:secs,post:post};
+}
+var sendState='';
+function finalHTML(){
+  var sub=submission(),left=MAX_ATTEMPTS-(S.attempt||1),sentOk=!!SUBMIT_URL&&S.sent==='ok',top='',backup='',again='';
+  var codePanel='<div class="panel"><h3>'+(SUBMIT_URL?'Backup copy':'Send your submission')+'</h3><p>'+(SUBMIT_URL?'Only needed if sending keeps failing. Copy this text and give it to the organizers as it is.':'Copy this whole text and send it to the organizers as it is. Please do not change it.')+'</p><textarea class="sub" id="sub" readonly aria-label="Submission text" style="min-height:150px">'+esc(sub.txt)+'</textarea><div class="row" style="margin-top:10px"><button class="btn'+(SUBMIT_URL?'':' go')+'" data-act="copy">Copy submission</button><span id="cpmsg" class="muted" role="status"></span></div></div>';
+  if(SUBMIT_URL){
+    if(sentOk){top='<div class="panel"><h2>Submitted</h2><p>Your answers have reached the organizers (attempt '+(S.attempt||1)+'). Results will be announced later. Scores are not shown here.</p><p class="muted">Time taken: '+fmt(sub.secs)+'</p></div>'}
+    else if(sendState==='sending'){top='<div class="panel"><h2>Sending your answers</h2><p>One moment, do not close this page.</p></div>'}
+    else{top='<div class="panel"><h2>Not sent yet</h2><p>Your answers have not reached the organizers yet. Check your internet connection and tap Send.</p><button class="btn go" data-act="send">Send my answers</button></div>';backup=codePanel}
+  } else {
+    top='<div class="panel"><h2>Challenge complete</h2><p>Well played, '+esc(norm(S.name))+'. Scores are not shown here. The organizers will announce results.</p><p class="muted">Time taken: '+fmt(sub.secs)+'</p></div>';backup=codePanel;
+  }
+  if(!SUBMIT_URL||sentOk){
+    again=left>0?'<div class="panel"><h3>Want to improve your plan?</h3><p>You can resubmit. Your new attempt replaces this one when the organizers score it. Attempts left: '+left+'.</p><button class="btn" data-act="again">Start a new attempt</button></div>':'<div class="panel"><p class="muted">You have used all '+MAX_ATTEMPTS+' attempts.</p></div>';
+  }
+  return top+backup+again;
+}
+function sendNow(){
+  if(!SUBMIT_URL||S.sent==='ok'||sendState==='sending')return;
+  sendState='sending';render();
+  var body=JSON.stringify(submission().post),ctl=window.AbortController?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort()},25000);
+  fetch(SUBMIT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,signal:ctl?ctl.signal:undefined})
+    .then(function(r){return r.json()})
+    .then(function(j){clearTimeout(tm);if(j&&j.ok){S.sent='ok';sendState='';save()}else{sendState='fail'}render()})
+    .catch(function(){clearTimeout(tm);sendState='fail';render()});
+}
+
+/* ---------- render ---------- */
+function ready(){
+  if(S.stage==='intro')return norm(S.name).length>=2&&norm(S.roll).length>=2;
+  if(S.stage==='r1')return S.q1.length===5&&S.q1.every(function(j){return num(S.f1[j])!==null});
+  if(S.stage==='r2')return S.q2.length===4&&S.q2.every(function(j){return num(S.f2[j])!==null})&&norm(S.why).length>=15;
+  if(S.stage==='r3')return norm(S.handle).length>=15&&norm(S.impact).length>=15;
+  return true;
+}
+function hintText(){
+  if(S.stage==='r1'){if(S.q1.length<5)return 'Queue all 5 jobs, then fill in the finish times.';if(!ready())return 'Fill in a finish hour for every job.'}
+  if(S.stage==='r2'){if(S.q2.length<4)return 'Queue all 4 remaining jobs.';if(!ready())return 'Fill in every finish hour and explain your change (15+ characters).'}
+  if(S.stage==='r3'&&!ready())return 'Write at least a sentence for each answer.';
+  return '';
+}
+function refresh(){var b=$('#primary');if(b&&b.dataset.act!=='next'&&b.dataset.act!=='copy')b.disabled=!ready();var h=$('#hint');if(h)h.textContent=ready()?'':hintText()}
+function render(){
+  andon();
+  var h='';
+  switch(S.stage){
+    case 'intro':h=introHTML();break;
+    case 'r1':h=planHTML(1);break;
+    case 'r1res':h=resultHTML(1);break;
+    case 'r2':h=planHTML(2);break;
+    case 'r2res':h=resultHTML(2);break;
+    case 'r3':h=r3HTML();break;
+    default:h=finalHTML();
+  }
+  $('#screen').innerHTML=h;refresh();
+}
+function go(stage){S.stage=stage;save();render();try{window.scrollTo(0,0)}catch(e){}}
+
+/* ---------- events ---------- */
+var scr=$('#screen');
+scr.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  var a=b.dataset.act,q=S.stage==='r1'?S.q1:S.q2,i=+b.dataset.i;
+  if(a==='start'){S.name=norm(S.name);S.roll=norm(S.roll);S.t0=Date.now();go('r1');return}
+  if(a==='add'){if(q.length<(S.stage==='r1'?5:4)&&q.indexOf(b.dataset.j)<0)q.push(b.dataset.j);save();render();return}
+  if(a==='rm'){q.splice(i,1);save();render();return}
+  if(a==='up'&&i>0){var t=q[i];q[i]=q[i-1];q[i-1]=t;save();render();return}
+  if(a==='down'&&i<q.length-1){var t2=q[i];q[i]=q[i+1];q[i+1]=t2;save();render();return}
+  if(a==='clear'){q.length=0;save();render();return}
+  if(a==='lock'){
+    if(!ready())return;
+    if(S.stage==='r1'){S.s1={res:run(S.q1,false)};go('r1res')}else{S.s2={res:run([S.q1[0]].concat(S.q2),true)};go('r2res')}
+    return;
+  }
+  if(a==='next'){go(S.stage==='r1res'?'r2':'r3');return}
+  if(a==='submit'){if(!ready())return;S.t1=Date.now();go('final');sendNow();return}
+  if(a==='send'){sendNow();return}
+  if(a==='again'){var nx=(S.attempt||1)+1;if(nx>MAX_ATTEMPTS)return;var nm0=S.name,rl0=S.roll;S=fresh();sendState='';S.attempt=nx;S.name=nm0;S.roll=rl0;save();render();try{window.scrollTo(0,0)}catch(err){}return}
+  if(a==='copy'){
+    var ta=$('#sub'),m=$('#cpmsg');
+    function sel(){ta.focus();ta.select();m.textContent='Text selected. Copy it manually.'}
+    try{navigator.clipboard.writeText(ta.value).then(function(){m.textContent='Copied.'},sel)}catch(err){sel()}
+  }
+});
+scr.addEventListener('input',function(e){
+  var t=e.target,id=t.id||'';
+  if(id==='nm')S.name=t.value;else if(id==='rl')S.roll=t.value;
+  else if(id==='why')S.why=t.value;else if(id==='handle')S.handle=t.value;else if(id==='impact')S.impact=t.value;
+  else if(/^f-[A-E]$/.test(id)){(S.stage==='r1'?S.f1:S.f2)[id.charAt(2)]=t.value}
+  else return;
+  save();refresh();
+});
+
+render();
+})();
+</script>
+
+<script>if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
+</body>
+</html>
